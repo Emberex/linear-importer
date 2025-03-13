@@ -30,7 +30,6 @@ async function create({
     },
   });
 
-  const pivotalAndLinearIssues = [];
   for (const [index, issue] of issuesPayload.entries()) {
     try {
       const issueParams = await buildIssueParams({
@@ -48,10 +47,6 @@ async function create({
       // Create Issue
       const newIssue = await linearClient.createIssue(issueParams);
 
-      pivotalAndLinearIssues.push({
-        pivotalIssue: issue,
-        linearIssue: await newIssue.issue,
-      });
       // Write successful import to log
       await logSuccessfulImport({
         team,
@@ -74,8 +69,6 @@ async function create({
       process.exit(0);
     }
   }
-
-  return pivotalAndLinearIssues;
 }
 
 export default create;

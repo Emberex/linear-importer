@@ -4,6 +4,40 @@ import fs from "fs/promises";
 import path from "path";
 import inquirer from "inquirer";
 import { detailedLogger } from "../../logger/logger_instance.js";
+import { USERNAME_REGEX } from "../constants/regex.js";
+
+export function extractUsernames(extractedPivotalData) {
+  const usernames = new Set(
+    extractedPivotalData.csvData.aggregatedData.userNames,
+  );
+
+  // Add @mentions from pivotal blockers.
+  extractedPivotalData.formattedIssuePayload.forEach((issue) => {
+    issue.blockers.forEach((blocker) =>
+      (blocker.match(USERNAME_REGEX) || []).forEach((name) =>
+        usernames.add(name),
+      ),
+    );
+  });
+
+  // Add @mentions from pivotal blockers.
+  extractedPivotalData.formattedIssuePayload.forEach((issue) =>
+    (issue.description.match(USERNAME_REGEX) || []).forEach((name) =>
+      usernames.add(name),
+    ),
+  );
+
+  // Add @mentions from comments.
+  extractedPivotalData.formattedIssuePayload.forEach((issue) => {
+    issue.comments.forEach((comment) =>
+      (comment.match(USERNAME_REGEX) || []).forEach((name) =>
+        usernames.add(name),
+      ),
+    );
+  });
+
+  return Array.from(usernames);
+}
 
 /**
  * Creates a mapping file that links external usernames to Linear users
@@ -26,7 +60,9 @@ import { detailedLogger } from "../../logger/logger_instance.js";
  * 2. Prompts for Linear username matches if they don't exist
  * 3. Saves the mapping for use during issue creation
  */
-async function createUserMapping({ team, extractedUsernames }) {
+async function createUserMapping({ team, extractedPivotalData }) {
+  const extractedUsernames = extractUsernames(extractedPivotalData);
+
   if (extractedUsernames.length === 0) {
     detailedLogger.error("No extracted usernames found. Skipping...");
     process.exit(0);

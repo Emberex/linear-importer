@@ -6,7 +6,11 @@ import selectStatusTypes from "./select_status_types.js";
 
 import buildImportSummary from "./build_import_summary.js";
 
-async function formatter({ team, directory }) {
+async function formatter({
+  team,
+  directory,
+  includePreviouslyImportedStories,
+}) {
   detailedLogger.importantLoading(`Setting up Pivotal Import...`);
 
   // Prompt user to select status types
@@ -18,16 +22,20 @@ async function formatter({ team, directory }) {
   // Read previously imported stories from `successful_imports.csv`
   const successfulImports = await readSuccessfulImports(team.name);
 
-  // Filter out stories that have already been imported and logged in `successful_imports.csv`
-  // TODO: move this out of pivotal formatter and make it a global function. probably need to create a dir for each import source to allow for different log files per import source
-  const pivotalStoriesThatHaveNotBeenImported = csvData.issues.filter(
-    (story) => !successfulImports.has(story.id),
-  );
+  let formattedIssuePayload = csvData.issues;
 
-  // Only include stories that match the selected status types in `selectedStatusTypes`
-  const formattedIssuePayload = pivotalStoriesThatHaveNotBeenImported.filter(
-    (story) => selectedStatusTypes.includes(story.state),
-  );
+  if (!includePreviouslyImportedStories) {
+    // Filter out stories that have already been imported and logged in `successful_imports.csv`
+    // TODO: move this out of pivotal formatter and make it a global function. probably need to create a dir for each import source to allow for different log files per import source
+    const pivotalStoriesThatHaveNotBeenImported = csvData.issues.filter(
+      (story) => !successfulImports.has(story.id),
+    );
+
+    // Only include stories that match the selected status types in `selectedStatusTypes`
+    formattedIssuePayload = pivotalStoriesThatHaveNotBeenImported.filter(
+      (story) => selectedStatusTypes.includes(story.state),
+    );
+  }
 
   // TODO: Make this shorter... maybe return a sample object or set to a different logging level
   detailedLogger.info(
