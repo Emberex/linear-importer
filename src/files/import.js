@@ -15,31 +15,28 @@ async function uploadFileToLinear(file, issueId) {
   let fileType = file.type;
   let fileSize = file.size;
 
-  if (!(file instanceof File) && !(file instanceof Blob)) {
-    if (
-      typeof file === "object" &&
-      file !== null &&
-      "name" in file &&
-      "type" in file &&
-      "size" in file
-    ) {
-      try {
-        if (file.arrayBuffer) {
-          const buffer = await file.arrayBuffer();
-          file = new Blob([buffer], { type: file.type });
-        } else {
-          file = new Blob([file], { type: file.type });
-        }
-        // console.log(chalk.yellow("Created Blob from file object"));
-      } catch (e) {
-        console.error("Failed to create Blob from file object:", e);
-        process.exit(0);
+  if (
+    typeof file === "object" &&
+    file !== null &&
+    "name" in file &&
+    "type" in file &&
+    "size" in file
+  ) {
+    try {
+      if (file.arrayBuffer) {
+        const buffer = await file.arrayBuffer();
+        file = new Blob([buffer], { type: file.type });
+      } else {
+        file = new Blob([file], { type: file.type });
       }
-    } else {
-      throw new Error(
-        "Invalid file object. Expected File or Blob, or an object with name, type, and size properties.",
-      );
+    } catch (e) {
+      console.error("Failed to create Blob from file object:", e);
+      process.exit(0);
     }
+  } else {
+    throw new Error(
+      "Invalid file object. Expected File or Blob, or an object with name, type, and size properties.",
+    );
   }
 
   if (ENABLE_DETAILED_LOGGING) {

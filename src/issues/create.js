@@ -17,6 +17,7 @@ async function create({
   options,
   importSource,
   directory,
+  userMapping,
 }) {
   // Keep outside of loop to only fetch these values once
   const teamStatuses = await fetchStatuses(team.id);
@@ -42,6 +43,7 @@ async function create({
         scale,
         index,
         releaseIssues,
+        userMapping,
       });
 
       // Create Issue
@@ -57,7 +59,7 @@ async function create({
 
       // Create Comments
       if (options.shouldImportComments)
-        await createComments({ issue, newIssue });
+        await createComments({ issue, newIssue, userMapping });
 
       // Create File Attachments
       if (options.shouldImportFiles)

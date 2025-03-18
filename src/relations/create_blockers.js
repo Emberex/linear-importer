@@ -4,7 +4,6 @@ import { REQUEST_DELAY_MS } from "../../config/config.js";
 import createComment from "../comments/create.js";
 import fetchIssuesForTeam from "../issues/list.mjs";
 import fetchRelations from "./list.mjs";
-import getUserMapping from "../users/get_user_mapping.js";
 import { linkLinearUsernames } from "../users/link_linear_usernames.js";
 import {
   PIVOTAL_ID_REGEX,
@@ -12,9 +11,11 @@ import {
   LINEAR_COMMENT_PIVOTAL_ID_REGEX,
 } from "../constants/regex.js";
 
-async function createBlockers({ pivotalIssues, team }) {
-  const userMapping = await getUserMapping(team.name);
-
+async function createBlockers({
+  pivotalIssuesToImportBlockersFrom,
+  team,
+  userMapping,
+}) {
   const existingRelations = await fetchRelations();
   const linearIssues = await fetchIssuesForTeam({ teamId: team.id });
 
@@ -33,7 +34,7 @@ async function createBlockers({ pivotalIssues, team }) {
     return acc;
   }, {});
 
-  for (const issue of pivotalIssues) {
+  for (const issue of pivotalIssuesToImportBlockersFrom) {
     if (issue.blockers.length === 0) {
       detailedLogger.importantInfo(`No blockers found for story ${issue.id}.`);
       continue;
@@ -108,7 +109,7 @@ async function createBlockers({ pivotalIssues, team }) {
         // Since Linear blockers are relations between two issues, we can't create people / text
         // blockers like you can with Pivotal. Instead, this creates comments on the blocked issue
         // with the same information.
-        const issueBody = `Blocker: ${await linkLinearUsernames(blocker, userMapping)}${blockerStatus === "resolved" ? " - resolved" : ""}`;
+        const issueBody = `Blocker: ${linkLinearUsernames({ text: blocker, userMapping })}${blockerStatus === "resolved" ? " - resolved" : ""}`;
         const existingComments = await linearClient.comments({
           filter: { issue: { id: { eq: linearIssueId } } },
         });

@@ -1,5 +1,4 @@
 import inquirer from "inquirer";
-import { detailedLogger } from "../../logger/logger_instance.js";
 
 async function importBlockers() {
   const { shouldImportBlockers } = await inquirer.prompt([
@@ -14,23 +13,7 @@ async function importBlockers() {
       default: true,
     },
   ]);
-
-  const { shouldOnlyImportBlockers } = await inquirer.prompt([
-    {
-      type: "list",
-      name: "shouldOnlyImportBlockers",
-      message: "Do you want to import anything else?",
-      choices: [
-        { name: "Yes", value: false },
-        { name: "No", value: true },
-      ],
-      default: true,
-    },
-  ]);
-
-  detailedLogger.info(`shouldOnlyImportBlockers: ${shouldOnlyImportBlockers}`);
-
-  return { shouldImportBlockers, shouldOnlyImportBlockers };
+  return shouldImportBlockers;
 }
 
 export default importBlockers;

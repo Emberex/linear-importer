@@ -6,11 +6,7 @@ import selectStatusTypes from "./select_status_types.js";
 
 import buildImportSummary from "./build_import_summary.js";
 
-async function formatter({
-  team,
-  directory,
-  includePreviouslyImportedStories,
-}) {
+async function formatter({ team, directory }) {
   detailedLogger.importantLoading(`Setting up Pivotal Import...`);
 
   // Prompt user to select status types
@@ -22,20 +18,19 @@ async function formatter({
   // Read previously imported stories from `successful_imports.csv`
   const successfulImports = await readSuccessfulImports(team.name);
 
-  let formattedIssuePayload = csvData.issues;
+  const formattedIssuePayload = csvData.issues;
 
-  if (!includePreviouslyImportedStories) {
-    // Filter out stories that have already been imported and logged in `successful_imports.csv`
-    // TODO: move this out of pivotal formatter and make it a global function. probably need to create a dir for each import source to allow for different log files per import source
-    const pivotalStoriesThatHaveNotBeenImported = csvData.issues.filter(
-      (story) => !successfulImports.has(story.id),
-    );
+  // Filter out stories that have already been imported and logged in `successful_imports.csv`
+  // TODO: move this out of pivotal formatter and make it a global function. probably need to create a dir for each import source to allow for different log files per import source
+  const pivotalStoriesThatHaveNotBeenImported = csvData.issues.filter(
+    (story) => !successfulImports.has(story.id),
+  );
 
-    // Only include stories that match the selected status types in `selectedStatusTypes`
-    formattedIssuePayload = pivotalStoriesThatHaveNotBeenImported.filter(
-      (story) => selectedStatusTypes.includes(story.state),
+  // Only include stories that match the selected status types in `selectedStatusTypes`
+  const filteredFormattedIssuePayload =
+    pivotalStoriesThatHaveNotBeenImported.filter((story) =>
+      selectedStatusTypes.includes(story.state),
     );
-  }
 
   // TODO: Make this shorter... maybe return a sample object or set to a different logging level
   detailedLogger.info(
@@ -46,21 +41,18 @@ async function formatter({
     )}`,
   );
 
-  // Check if there are any stories left to import
-  if (formattedIssuePayload.length === 0) {
-    detailedLogger.importantSuccess(
-      "You have already imported all Pivotal Stories! Exiting.",
-    );
-    process.exit(0);
-  }
-
   // Build import summary
   const confirmationMessage = buildImportSummary({
-    formattedIssuePayload,
+    formattedIssuePayload: filteredFormattedIssuePayload,
     successfulImports,
   });
 
-  return { csvData, formattedIssuePayload, confirmationMessage };
+  return {
+    csvData,
+    formattedIssuePayload,
+    filteredFormattedIssuePayload,
+    confirmationMessage,
+  };
 }
 
 export default formatter;

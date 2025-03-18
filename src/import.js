@@ -1,6 +1,7 @@
 import { detailedLogger } from "../logger/logger_instance.js";
 import initializeLogger from "../logger/initialize.js";
 import createStatuses from "./statuses/create.mjs";
+import updateLabels from "./prompts/update_labels.js";
 import importLabels from "./prompts/import_labels.js";
 import importBlockers from "./prompts/import_blockers.js";
 import importComments from "./prompts/import_comments.js";
@@ -18,6 +19,7 @@ import { PIVOTAL_DEFAULT_LABELS } from "./labels/pivotal/_constants.js";
 import selectDirectory from "./prompts/select_csv_directory.js";
 import createIssues from "./issues/create.js";
 import createBlockers from "./relations/create_blockers.js";
+import getUserMapping from "./users/get_user_mapping.js";
 
 //=============================================================================
 // Select Import Source
@@ -40,89 +42,101 @@ initializeLogger({ team });
 const directory = await selectDirectory();
 
 //=============================================================================
-// Format Data for Import Type
-//=============================================================================
-// TODO: Modify to swap different data sources, based on importSource
-const extractedPivotalData = await pivotalFormatter({
-  team,
-  directory,
-  includePreviouslyImportedStories: false, // This is currently just for testing.
-});
-
-//=============================================================================
 // Build Import Options
 //=============================================================================
-const { shouldImportBlockers, shouldOnlyImportBlockers } =
-  await importBlockers();
 
-if (!shouldOnlyImportBlockers) {
-  const shouldImportFiles = await importFiles();
-  const shouldImportLabels = await importLabels();
-  const shouldImportComments = await importComments();
-  const shouldImportPriority = await importPriority();
-  const shouldImportEstimates = await importEstimates();
-  if (shouldImportEstimates) await updateIssueEstimationType({ team });
+const shouldImportBlockers = await importBlockers();
+const shouldImportFiles = await importFiles();
+const shouldUpdateLabels = await updateLabels();
+const shouldImportLabels = await importLabels();
+const shouldImportComments = await importComments();
+const shouldImportPriority = await importPriority();
+const shouldImportEstimates = await importEstimates();
+if (shouldImportEstimates) await updateIssueEstimationType({ team });
 
-  // Options get passed to createIssues
-  const options = {
-    shouldImportFiles,
-    shouldImportLabels,
-    shouldImportComments,
-    shouldImportPriority,
-    shouldImportEstimates,
-  };
+// Options get passed to createIssues
+const options = {
+  shouldImportFiles,
+  shouldImportLabels,
+  shouldImportComments,
+  shouldImportPriority,
+  shouldImportEstimates,
+};
 
-  //=============================================================================
-  // Create User Mapping
-  //=============================================================================
-  await createUserMapping({
+detailedLogger.info(`Import Source: ${importSource}`);
+detailedLogger.info(`Team: ${JSON.stringify(team, null, 2)}`);
+detailedLogger.info(`Directory: ${directory}`);
+detailedLogger.info(`Options: ${JSON.stringify(options, null, 2)}`);
+
+//=============================================================================
+// Format Data for Import Type
+//=============================================================================
+
+// TODO: Modify to swap different data sources, based on importSource
+const { filteredFormattedIssuePayload, ...extractedPivotalData } =
+  await pivotalFormatter({
     team,
-    extractedPivotalData,
+    directory,
   });
 
-  detailedLogger.info(`Import Source: ${importSource}`);
-  detailedLogger.info(`Team: ${JSON.stringify(team, null, 2)}`);
-  detailedLogger.info(`Directory: ${directory}`);
-  detailedLogger.info(`Options: ${JSON.stringify(options, null, 2)}`);
+//=============================================================================
+// Create User Mapping
+//=============================================================================
 
-  //=============================================================================
-  // Confirm Proceed
-  //=============================================================================
-  await proceedWithImport({
-    confirmationMessage: extractedPivotalData.confirmationMessage,
-  });
+await createUserMapping({
+  team,
+  extractedPivotalData,
+});
 
+const userMapping = await getUserMapping(team.name);
+
+//=============================================================================
+// Confirm Proceed
+//=============================================================================
+await proceedWithImport({
+  confirmationMessage: extractedPivotalData.confirmationMessage,
+});
+
+if (filteredFormattedIssuePayload.length === 0) {
+  detailedLogger.importantSuccess(
+    "You have already imported all Pivotal Stories!",
+  );
+} else {
   //=============================================================================
   // Create Labels and Statuses
   //=============================================================================
-  // Create Workspace statuses using Pivotal statuses
-  // TODO: Modify for other import sources
-  await createStatuses({ teamId: team.id });
+  if (shouldUpdateLabels) {
+    // Create Workspace statuses using Pivotal statuses
+    // TODO: Modify for other import sources
+    await createStatuses({ teamId: team.id });
 
-  // Create Workspace labels using Pivotal default labels
-  await createLabels({ teamId: team.id, labels: PIVOTAL_DEFAULT_LABELS });
+    // Create Workspace labels using Pivotal default labels
+    await createLabels({ teamId: team.id, labels: PIVOTAL_DEFAULT_LABELS });
 
-  // Create Workspace labels using extracted labels
-  if (shouldImportLabels) {
-    await createLabels({
-      teamId: team.id,
-      labels: extractedPivotalData.csvData.aggregatedData.labels,
-    });
+    // Create Workspace labels using extracted labels
+    if (shouldImportLabels) {
+      await createLabels({
+        teamId: team.id,
+        labels: extractedPivotalData.csvData.aggregatedData.labels,
+      });
+    }
   }
 
   //=============================================================================
   // Create Release Issues
   //=============================================================================
   // Create Release Issues first so that we can assign sub-issues
-  const releaseIssues = extractedPivotalData.formattedIssuePayload.filter(
+  const releaseIssues = filteredFormattedIssuePayload.filter(
     (issue) => issue.isRelease,
   );
+
   await createIssues({
     team,
     issuesPayload: releaseIssues,
     options,
     importSource,
     directory,
+    userMapping,
   });
 
   //=============================================================================
@@ -130,7 +144,7 @@ if (!shouldOnlyImportBlockers) {
   //=============================================================================
   // Create non-release issues after release issues have been created, so that
   // a parentId can be assigned if necessary
-  const nonReleaseIssues = extractedPivotalData.formattedIssuePayload.filter(
+  const nonReleaseIssues = filteredFormattedIssuePayload.filter(
     (issue) => !issue.isRelease,
   );
   await createIssues({
@@ -139,6 +153,7 @@ if (!shouldOnlyImportBlockers) {
     options,
     importSource,
     directory,
+    userMapping,
   });
 }
 
@@ -146,10 +161,21 @@ if (!shouldOnlyImportBlockers) {
 // Create Blockers
 //=============================================================================
 
+const nextPivotalIssueIndexToImportBlockersFrom =
+  extractedPivotalData.formattedIssuePayload.findIndex(
+    ({ id }) => id === "170964258",
+  );
+
+const pivotalIssuesToImportBlockersFrom =
+  extractedPivotalData.formattedIssuePayload.slice(
+    nextPivotalIssueIndexToImportBlockersFrom,
+  );
+
 if (shouldImportBlockers) {
   await createBlockers({
     team,
-    pivotalIssues: extractedPivotalData.formattedIssuePayload,
+    pivotalIssuesToImportBlockersFrom,
+    userMapping,
   });
 }
 
