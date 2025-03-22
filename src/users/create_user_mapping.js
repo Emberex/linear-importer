@@ -191,11 +191,13 @@ async function createUserMapping({ team, extractedPivotalData }) {
           linearId: selectedMember.id,
           linearName: selectedMember.name,
           linearEmail: selectedMember.email,
+          linearProfileUrl: selectedMember.url,
         }
       : {
           linearId: null,
           linearName: null,
           linearEmail: null,
+          linearProfileUrl: null,
           note: "No matching Linear user found (manual skip)",
         };
   }
