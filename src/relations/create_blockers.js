@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import linearClient from "../../config/client.mjs";
 import { detailedLogger } from "../../logger/logger_instance.js";
 import { REQUEST_DELAY_MS } from "../../config/config.js";
@@ -16,6 +17,8 @@ async function createBlockers({
   team,
   userMapping,
 }) {
+  console.log(chalk.cyan(`🔄 Creating blockers...`));
+
   const existingRelations = await fetchRelations();
   const linearIssues = await fetchIssuesForTeam({ teamId: team.id });
 
@@ -39,24 +42,11 @@ async function createBlockers({
       detailedLogger.importantInfo(`No blockers found for story ${issue.id}.`);
       continue;
     }
-    if (issue.blockers.length !== issue.blockerStatuses.length) {
-      detailedLogger.importantError(
-        `Found a different number of blockers and blocker statuses for story ${issue.id}.`,
-      );
-      continue;
-    }
 
     for (var i = 0; i < issue.blockers.length; i++) {
       const blocker = issue.blockers[i];
       const blockerStatus = issue.blockerStatuses[i];
       const linearIssueId = pivotalIdToLinearId[issue.id];
-
-      if (!blocker.trim()) {
-        detailedLogger.importantInfo(
-          `Skipping blank blocker for story ${issue.id}`,
-        );
-        continue;
-      }
 
       if (!linearIssueId) {
         detailedLogger.importantError(
@@ -93,6 +83,7 @@ async function createBlockers({
           );
           continue;
         }
+
         try {
           await linearClient.createIssueRelation({
             issueId: blockingIssueId,

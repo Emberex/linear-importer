@@ -18,7 +18,33 @@ async function formatter({ team, directory }) {
   // Read previously imported stories from `successful_imports.csv`
   const successfulImports = await readSuccessfulImports(team.name);
 
-  const formattedIssuePayload = csvData.issues;
+  // Remove empty blockers.
+  const formattedIssuePayload = csvData.issues.map(
+    ({ blockers, blockerStatuses, ...issue }) => {
+      if (blockers.length !== blockerStatuses.length) {
+        detailedLogger.error(
+          `Found a different number of blockers and blocker statuses for story ${issue.id}. Exiting...`,
+        );
+        process.exit(1);
+      }
+
+      const reducedBlockers = [];
+      const reducedBlockerStatuses = [];
+      for (var i = 0; i < blockers.length; ++i) {
+        const blocker = blockers[i];
+        if (!blocker.trim()) {
+          continue;
+        }
+        reducedBlockers.push(blocker);
+        reducedBlockerStatuses.push(blockerStatuses[i]);
+      }
+      return {
+        ...issue,
+        blockers: reducedBlockers,
+        blockerStatuses: reducedBlockerStatuses,
+      };
+    },
+  );
 
   // Filter out stories that have already been imported and logged in `successful_imports.csv`
   // TODO: move this out of pivotal formatter and make it a global function. probably need to create a dir for each import source to allow for different log files per import source
