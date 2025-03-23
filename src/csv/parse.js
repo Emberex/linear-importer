@@ -92,7 +92,7 @@ export async function parseCSVFile(csvFilename, filePath) {
 
   const data = await readCSV(filePath);
 
-  detailedLogger.importantInfo(`CSV Data: ${JSON.stringify(data, null, 2)}`);
+  detailedLogger.info(`CSV Data: ${JSON.stringify(data, null, 2)}`);
 
   return data;
 }
