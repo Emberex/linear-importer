@@ -48,7 +48,7 @@ class DetailedLogger {
   }
 
   importantInfo(message) {
-    if (ENABLE_DETAILED_LOGGING === false) return;
+    //if (ENABLE_DETAILED_LOGGING === false) return;
     console.log("\n" + chalk.cyan("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"));
     console.log(chalk.bold.cyan(`  ✨ ${message}`));
     console.log(chalk.cyan("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
@@ -71,8 +71,15 @@ class DetailedLogger {
   importantError(message) {
     // if (ENABLE_DETAILED_LOGGING === false) return;
     console.error("\n" + chalk.red("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓"));
-    console.error(chalk.bold.red(`  ⚠️  ${message}`));
+    console.error(chalk.bold.red(`  ❌  ${message}`));
     console.error(chalk.red("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\n"));
+  }
+
+  importantWarning(message) {
+    // if (ENABLE_DETAILED_LOGGING === false) return;
+    console.error("\n" + chalk.yellow("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓"));
+    console.error(chalk.bold.yellow(`  ⚠️  ${message}`));
+    console.error(chalk.yellow("▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓\n"));
   }
 
   importantSummary(message) {

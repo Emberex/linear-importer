@@ -23,6 +23,7 @@ async function fetchIssuesForTeam({ teamId, filters }) {
           identifier: issue.identifier,
           title: issue.title,
           createdAt: issue.createdAt,
+          description: issue.description,
         };
         allIssues.push(data);
       });

@@ -36,6 +36,8 @@ function getFileType(fileName) {
   switch (extension) {
     case ".pdf":
       return "application/pdf";
+    case ".csv":
+      return "text/csv";
     case ".png":
       return "image/png";
     case ".jpg":

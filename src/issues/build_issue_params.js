@@ -4,6 +4,7 @@ import formatPriority from "../priority/formatter.js";
 import extractLabelIds from "../labels/extract_label_ids.js";
 import userDistributor from "../users/distributor.js";
 import extractParentId from "./extract_parent_id.js";
+import { linkLinearUsernames } from "../users/link_linear_usernames.js";
 
 const formatDate = (date) => (date ? new Date(date).toISOString() : undefined);
 
@@ -16,6 +17,7 @@ async function buildIssueParams({
   teamLabels,
   scale,
   releaseIssues,
+  userMapping,
 }) {
   const stateId = teamStatuses.find(
     (state) => state.name === `${importSource} - ${issue.state}`,
@@ -39,7 +41,7 @@ async function buildIssueParams({
     cycleId: null,
     teamId: team.id,
     title: issue.title,
-    description: issue.description,
+    description: `Pivotal ID: #${issue.id}\n\n${linkLinearUsernames({ text: issue.description, userMapping })}`,
     labelIds,
     estimate: options.shouldImportEstimates ? estimate : undefined,
     priority: options.shouldImportPriority ? priority : undefined,
