@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import linearClient from "../../config/client.mjs";
 import { detailedLogger } from "../../logger/logger_instance.js";
+import logSuccessfulBlockerImport from "../../logger/log_successful_blocker_import.js";
 import { REQUEST_DELAY_MS } from "../../config/config.js";
 import createComment from "../comments/create.js";
 import fetchIssuesForTeam from "../issues/list.mjs";
@@ -39,7 +40,7 @@ async function createBlockers({
 
   for (const issue of pivotalIssuesToImportBlockersFrom) {
     if (issue.blockers.length === 0) {
-      detailedLogger.importantInfo(`No blockers found for story ${issue.id}.`);
+      detailedLogger.info(`No blockers found for story ${issue.id}.`);
       continue;
     }
 
@@ -50,21 +51,19 @@ async function createBlockers({
 
       if (!linearIssueId) {
         detailedLogger.importantError(
-          `Failed to find a Linear issue for story ${issue.id}. Blocker ${blocker} skipped.`,
+          `Failed to find a Linear issue for story ${issue.id}. Skipping blocker ${blocker}.`,
         );
         continue;
       }
 
-      detailedLogger.importantInfo(
-        `Creating blocker ${blocker} for story ${issue.id}`,
-      );
+      detailedLogger.info(`Creating blocker ${blocker} for story ${issue.id}`);
 
       if (PIVOTAL_ID_REGEX.test(blocker)) {
         const blockingIssueId = pivotalIdToLinearId[blocker.replace("#", "")];
 
         if (!blockingIssueId) {
           detailedLogger.importantError(
-            `Failed to find the issue blocking story ${issue.id}. Blocker ${blocker} skipped.`,
+            `Failed to find the issue blocking story ${issue.id}. Skipping blocker ${blocker}.`,
           );
           continue;
         }
@@ -79,7 +78,7 @@ async function createBlockers({
           )
         ) {
           detailedLogger.importantInfo(
-            `Issue ${blockingIssueId} is already blocking ${linearIssueId}. Skipping`,
+            `Issue ${blockingIssueId} is already blocking ${linearIssueId}. Skipping.`,
           );
           continue;
         }
@@ -126,9 +125,7 @@ async function createBlockers({
         }
       }
 
-      detailedLogger.importantSuccess(
-        `Successfully imported blocker ${blocker} for story ${issue.id}.`,
-      );
+      await logSuccessfulBlockerImport({ team, pivotalId: issue.id, blocker });
       await new Promise((resolve) => setTimeout(resolve, REQUEST_DELAY_MS));
     }
   }

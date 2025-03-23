@@ -45,7 +45,7 @@ const readSuccessfulImports = async (teamName) => {
       `Error reading successful imports for team "${teamName}":`,
       error,
     );
-    return new Set();
+    process.exit(0);
   }
 };
 

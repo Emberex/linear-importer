@@ -161,20 +161,11 @@ if (filteredFormattedIssuePayload.length === 0) {
 // Create Blockers
 //=============================================================================
 
-const nextPivotalIssueIndexToImportBlockersFrom =
-  extractedPivotalData.formattedIssuePayload.findIndex(
-    ({ id }) => id === "170964258",
-  );
-
-const pivotalIssuesToImportBlockersFrom =
-  extractedPivotalData.formattedIssuePayload.slice(
-    nextPivotalIssueIndexToImportBlockersFrom,
-  );
-
 if (shouldImportBlockers) {
   await createBlockers({
     team,
-    pivotalIssuesToImportBlockersFrom,
+    pivotalIssuesToImportBlockersFrom:
+      extractedPivotalData.formattedIssuePayload,
     userMapping,
   });
 }

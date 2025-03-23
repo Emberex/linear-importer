@@ -1,13 +1,27 @@
 import { detailedLogger } from "../../../logger/logger_instance.js";
 import readSuccessfulImports from "../../../logger/read_successful_imports.js";
-
 import parseCSV from "../../csv/parse.js";
 import selectStatusTypes from "./select_status_types.js";
-
 import buildImportSummary from "./build_import_summary.js";
+import readSuccessfulBlockerImports from "../../../logger/read_successful_blocker_imports.js";
 
 async function formatter({ team, directory }) {
   detailedLogger.importantLoading(`Setting up Pivotal Import...`);
+
+  const successfulBlockerImports = await readSuccessfulBlockerImports(
+    team.name,
+  );
+  const pivotalIdToBlockersMap = Array.from(successfulBlockerImports).reduce(
+    (acc, [id, blocker]) => {
+      if (acc[id]) {
+        acc[id].push(blocker);
+      } else {
+        acc[id] = [blocker];
+      }
+      return acc;
+    },
+    {},
+  );
 
   // Prompt user to select status types
   const selectedStatusTypes = await selectStatusTypes();
@@ -28,11 +42,15 @@ async function formatter({ team, directory }) {
         process.exit(1);
       }
 
+      const alreadyImportedBlockersForIssue = pivotalIdToBlockersMap[issue.id];
       const reducedBlockers = [];
       const reducedBlockerStatuses = [];
       for (var i = 0; i < blockers.length; ++i) {
         const blocker = blockers[i];
-        if (!blocker.trim()) {
+        if (
+          !blocker.trim() ||
+          alreadyImportedBlockersForIssue?.includes(blocker)
+        ) {
           continue;
         }
         reducedBlockers.push(blocker);
